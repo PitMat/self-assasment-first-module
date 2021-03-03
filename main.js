@@ -1,61 +1,57 @@
-const apiURL = `http://api.tvmaze.com/schedule?country=`
+const apiURL = `https://api.tvmaze.com`;
 
-    (async function () {
-        try {
-            const datas = await getMovies(apiURL, "US", "2020-03-03");
-            getTime(datas)
-        } catch (e) {
-            console.error(e.message)
-        }
-    })();
+(async function() {
+    try {
+        const datas = await getMovies("US", "2020-03-03");
+        getFilteredData(datas)
+    } catch (e) {
+        console.error(e.message)
+    }
+})();
 
-async function getMovies(url = apiURL, country ='US', date = '2020-03-03') {
-    const movieUrl = `${url}${country}&date=${date}`;
+async function getMovies(country = 'US', date = '2020-03-03') {
+    const movieUrl = `${apiURL}/schedule?country=${country}&date=${date}`;
     const response = await fetch(movieUrl);
     if (response.ok) {
         return await response.json();
-    } else {
-        new Error(`Error:${response.statusText}`)
     }
+    new Error(`Error:${response.statusText}`)
 }
 
-function getTime(arr) {
-    const arr1 = [];
+function getFilteredData(videos) {
+    const result = videos.filter(video => {
+        if (isProperTime(video) && isCategory(video.show.genres)) return video
+    });
+    displayMovie(result);
+}
+
+function isProperTime(element) {
     const reg = /^((1[89])|2[0-4])/gi;
-    arr.filter(element => {
-        element.airtime.match(reg) ? arr1.push(element) : element;
-    })
-
-    getCategories(arr1)
+    return element.airtime.match(reg);
 }
 
-function getCategories(data) {
-    const catArr = [];
+function isCategory(genres) {
     const regCat = /Comedy|Family|Travel/gi
-    data.filter(element => {
-        for (let elem of element.show.generes) {
-            if (elem.match(regCat)) {
-                catArr.push(element);
-                return catArr
-            }
+    for (let elem of genres) {
+        if (elem.match(regCat)) {
+            return true;
         }
-    })
-    displayMovie(catArr);
+    }
+    return false;
+
 }
 
-function displayMovie(arr) {
-    for (let element of arr) {
+function displayMovie(movies) {
+    for (let movie of movies) {
         const body = document.querySelector("body")
         const div = document.createElement("div");
-        let hashtags;
-        element.show.generes ? hashtags = element.show.generes.join("3") : hashtags = "";
-        let countryTag;
-        element.show.webChannel ? countryTag = element.show.webChannel.country.timezone : countryTag = "";
-        div.innerHTML = `${element.name} ${element.show.name} ${hashtags} ${element.airdate} ${element.airtime}${countryTag}`;
+        movie.show.genres.map((genre, index) => { movie.show.genres[index] = `#${genre}` });
+
+        let countryTag = movie.show.webChannel ? movie.show.webChannel.country.timezone : "";
+        div.innerHTML = `${movie.name} ${movie.show.name} ${movie.show.genres.join(', ')} ${movie.airdate} ${movie.airtime}${countryTag}`;
         body.appendChild(div);
         const img = document.createElement('img');
-        img.src = `${element.show.image.medium}`;
+        img.src = `${movie.show.image.medium}`;
         body.appendChild(img)
-
     }
 }
